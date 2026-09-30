@@ -25,21 +25,45 @@
         </tr>
       </tbody>
     </table>
+
+    <article v-if="spotcheckRow" class="review-panel">
+      <h3>点检记录复核结论</h3>
+      <div class="stat-row">
+        <span class="stat-label">已复核单数</span>
+        <strong class="stat-value">{{ spotcheckRow.reviewed }}</strong>
+        <span class="stat-label">复核异常单数</span>
+        <strong class="stat-value review-abnormal">{{ spotcheckRow.reviewAbnormal }}</strong>
+      </div>
+      <p class="page-desc">
+        已提交并完成复核 {{ spotcheckRow.reviewed }} 单，其中复核结论含异常 {{ spotcheckRow.reviewAbnormal }} 单；
+        待点检/点检中 {{ spotcheckRow.pending }} 单不计入复核异常。
+      </p>
+    </article>
   </section>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import { fetchJson } from '@/api/client'
 
+type ModuleRow = {
+  name: string
+  created: number
+  pending: number
+  abnormal: number
+  reviewed?: number
+  reviewAbnormal?: number
+}
+
 type Overview = {
   cards: { label: string; value: number }[]
-  modules: { name: string; created: number; pending: number; abnormal: number }[]
+  modules: ModuleRow[]
 }
 
 const cards = ref<Overview['cards']>([])
 const moduleRows = ref<Overview['modules']>([])
+const spotcheckRow = computed(() => moduleRows.value.find(row => row.name === 'spotcheck'))
 
 onMounted(async () => {
   try {
@@ -52,3 +76,16 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.review-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.review-panel h3 { margin: 0 0 8px; font-size: 15px; }
+.review-panel .stat-row { gap: 24px; }
+.review-abnormal { color: #b42318; }
+</style>

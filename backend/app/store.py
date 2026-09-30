@@ -31,17 +31,35 @@ class Store:
         modules: list[dict[str, object]] = []
         for name in self.module_names():
             rows = self.rows(name)
+            # 点检记录的异常标记以已提交的复核结论为准，待点检/点检中不计入异常量
+            if name == "spotcheck":
+                abnormal_count = sum(
+                    1 for row in rows
+                    if row.get("status") == "已提交"
+                    and not isinstance(row.get("异常项数"), bool)
+                    and str(row.get("异常项数") or "").strip() not in ("", "0")
+                )
+                reviewed = sum(1 for row in rows if row.get("status") == "已提交")
+                review_abnormal = abnormal_count
+            else:
+                abnormal_count = sum(1 for row in rows if row.get("abnormal"))
+                reviewed = 0
+                review_abnormal = 0
             modules.append({
                 "name": name,
                 "created": len(rows),
                 "pending": sum(1 for row in rows if row.get("pending")),
-                "abnormal": sum(1 for row in rows if row.get("abnormal")),
+                "abnormal": abnormal_count,
+                "reviewed": reviewed,
+                "reviewAbnormal": review_abnormal,
             })
         cards = [
             {"label": "业务模块", "value": len(modules)},
             {"label": "今日新增", "value": sum(int(item["created"]) for item in modules)},
             {"label": "待处理", "value": sum(int(item["pending"]) for item in modules)},
             {"label": "异常量", "value": sum(int(item["abnormal"]) for item in modules)},
+            {"label": "点检已复核", "value": sum(int(item["reviewed"]) for item in modules)},
+            {"label": "复核异常单数", "value": sum(int(item["reviewAbnormal"]) for item in modules)},
         ]
         return {"cards": cards, "modules": modules}
 
