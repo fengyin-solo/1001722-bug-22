@@ -37,13 +37,31 @@ class Store:
                 "pending": sum(1 for row in rows if row.get("pending")),
                 "abnormal": sum(1 for row in rows if row.get("abnormal")),
             })
+        # 点检记录复核结论汇总：已提交的记录待复核，复核通过/退回的结论分别计数
+        spotcheck_rows = self.rows("spotcheck")
+        spotcheck_review = {
+            "pending_review": sum(1 for row in spotcheck_rows if row.get("status") == "已提交"),
+            "approved": sum(1 for row in spotcheck_rows if row.get("status") == "已复核"),
+            "rejected": sum(1 for row in spotcheck_rows if row.get("status") == "已退回"),
+            "abnormal_committed": sum(1 for row in spotcheck_rows if row.get("abnormal")),
+            "latest": [
+                {
+                    "点检单号": row.get("点检单号"),
+                    "点检状态": row.get("status"),
+                    "复核结论": row.get("复核结论") or "—",
+                }
+                for row in spotcheck_rows
+                if row.get("status") in {"已复核", "已退回"}
+            ][-5:],
+        }
         cards = [
             {"label": "业务模块", "value": len(modules)},
             {"label": "今日新增", "value": sum(int(item["created"]) for item in modules)},
             {"label": "待处理", "value": sum(int(item["pending"]) for item in modules)},
             {"label": "异常量", "value": sum(int(item["abnormal"]) for item in modules)},
+            {"label": "点检待复核", "value": spotcheck_review["pending_review"]},
         ]
-        return {"cards": cards, "modules": modules}
+        return {"cards": cards, "modules": modules, "spotcheck_review": spotcheck_review}
 
 
 store = Store()
